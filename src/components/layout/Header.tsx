@@ -1,13 +1,24 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingCart, Menu, Phone, MapPin } from 'lucide-react';
+import { ShoppingCart, Menu, Phone, MapPin, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
+import AuthModal from '@/components/auth/AuthModal';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const Header: React.FC = () => {
   const { state } = useCart();
+  const { state: authState, logout } = useAuth();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = React.useState(false);
 
   const navigation = [
     { name: 'Главная', href: '/' },
@@ -55,6 +66,50 @@ const Header: React.FC = () => {
               </div>
             </div>
 
+            {authState.isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center space-x-2">
+                    <img
+                      src={authState.user?.avatar || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg'}
+                      alt={authState.user?.name}
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                    <span className="hidden md:block">{authState.user?.name}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile">
+                      <User className="w-4 h-4 mr-2" />
+                      Личный кабинет
+                    </Link>
+                  </DropdownMenuItem>
+                  {authState.user?.role === 'admin' && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin">
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        Админ-панель
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={logout}>
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Выйти
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button 
+                variant="outline" 
+                onClick={() => setIsAuthModalOpen(true)}
+              >
+                <User className="w-4 h-4 mr-2" />
+                Войти
+              </Button>
+            )}
+
             <Link to="/cart" className="relative">
               <Button variant="outline" size="icon">
                 <ShoppingCart className="w-5 h-5" />
@@ -93,6 +148,11 @@ const Header: React.FC = () => {
             </nav>
           </div>
         )}
+
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+        />
       </div>
     </header>
   );

@@ -1,40 +1,40 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { useCart } from '@/context/CartContext';
-import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
+import CartItem from '@/components/cart/CartItem';
+import CartSummary from '@/components/cart/CartSummary';
+import { ShoppingBag, ArrowLeft, Gift, Percent } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Cart: React.FC = () => {
   const { state, dispatch } = useCart();
 
-  const updateQuantity = (productId: string, quantity: number) => {
-    dispatch({ type: 'UPDATE_QUANTITY', productId, quantity });
-  };
-
-  const removeItem = (productId: string) => {
-    dispatch({ type: 'REMOVE_ITEM', productId });
-  };
-
-  const clearCart = () => {
-    dispatch({ type: 'CLEAR_CART' });
-  };
-
   if (state.items.length === 0) {
     return (
       <Layout>
-        <div className="container mx-auto px-4 py-16 text-center">
-          <ShoppingBag className="w-24 h-24 text-gray-300 mx-auto mb-6" />
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Корзина пуста</h1>
-          <p className="text-xl text-gray-600 mb-8">
-            Добавьте товары из каталога, чтобы сделать заказ
-          </p>
-          <Link to="/catalog">
-            <Button size="lg" className="bg-amber-600 hover:bg-amber-700">
-              Перейти в каталог
-            </Button>
-          </Link>
+        <div className="container mx-auto px-4 py-16">
+          <div className="max-w-md mx-auto text-center">
+            <ShoppingBag className="w-24 h-24 text-gray-300 mx-auto mb-6" />
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">Корзина пуста</h1>
+            <p className="text-xl text-gray-600 mb-8">
+              Добавьте товары из каталога, чтобы сделать заказ
+            </p>
+            <div className="space-y-4">
+              <Link to="/catalog">
+                <Button size="lg" className="w-full bg-amber-600 hover:bg-amber-700">
+                  Перейти в каталог
+                </Button>
+              </Link>
+              <Link to="/promotions">
+                <Button variant="outline" size="lg" className="w-full">
+                  <Percent className="w-4 h-4 mr-2" />
+                  Посмотреть акции
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
       </Layout>
     );
@@ -43,73 +43,135 @@ const Cart: React.FC = () => {
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-bold text-gray-900">Корзина</h1>
-          <Button variant="outline" onClick={clearCart}>
-            Очистить корзину
-          </Button>
+        <div className="mb-8">
+          <Link to="/catalog" className="inline-flex items-center text-amber-600 hover:text-amber-700 mb-4">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Продолжить покупки
+          </Link>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900">Корзина</h1>
+              <p className="text-gray-600">
+                {state.items.reduce((sum, item) => sum + item.quantity, 0)} товаров на сумму {state.total} ₽
+              </p>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={() => dispatch({ type: 'CLEAR_CART' })}
+              className="text-red-600 border-red-200 hover:bg-red-50"
+            >
+              Очистить корзину
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-4">
-            {state.items.map((item) => (
-              <Card key={item.product.id}>
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <img
-                      src={item.product.image}
-                      alt={item.product.name}
-                      className="w-20 h-20 object-cover rounded-lg"
-                    />
-                    
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {item.product.name}
-                      </h3>
-                      <p className="text-gray-600 text-sm">
-                        {item.product.description}
-                      </p>
-                      <div className="text-amber-600 font-semibold mt-1">
-                        {item.product.price} ₽ за {item.product.weight}г
-                      </div>
-                    </div>
+          <div className="lg:col-span-2">
+            <div className="space-y-4">
+              {state.items.map((item) => (
+                <CartItem key={item.product.id} item={item} />
+              ))}
+            </div>
 
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                      >
-                        <Minus className="w-4 h-4" />
-                      </Button>
-                      <span className="w-12 text-center font-semibold">
-                        {item.quantity}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </div>
-
-                    <div className="text-right">
-                      <div className="text-lg font-semibold text-gray-900">
-                        {item.product.price * item.quantity} ₽
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeItem(item.product.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+            <Card className="mt-6 bg-amber-50">
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-3">
+                  <Gift className="w-6 h-6 text-amber-600" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Рекомендуем добавить</h3>
+                    <p className="text-gray-600 text-sm">
+                      Популярные товары, которые часто покупают вместе
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div className="flex items-center space-x-3 p-3 bg-white rounded-lg">
+                    <img
+                      src="https://images.pexels.com/photos/1126359/pexels-photo-1126359.jpeg"
+                      alt="Эклеры"
+                      className="w-12 h-12 object-cover rounded"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium">Эклеры с кремом</div>
+                      <div className="text-amber-600 font-semibold">65 ₽</div>
+                    </div>
+                    <Button size="sm" variant="outline">
+                      Добавить
+                    </Button>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 bg-white rounded-lg">
+                    <img
+                      src="https://images.pexels.com/photos/140831/pexels-photo-140831.jpeg"
+                      alt="Чизкейк"
+                      className="w-12 h-12 object-cover rounded"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium">Чизкейк "Нью-Йорк"</div>
+                      <div className="text-amber-600 font-semibold">450 ₽</div>
+                    </div>
+                    <Button size="sm" variant="outline">
+                      Добавить
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div>
+            <CartSummary />
+
+            <Card className="mt-6 bg-green-50">
+              <CardContent className="p-6 text-center">
+                <Shield className="w-12 h-12 text-green-600 mx-auto mb-3" />
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  Безопасная покупка
+                </h3>
+                <div className="text-sm text-gray-600 space-y-1">
+                  <div>✓ SSL шифрование данных</div>
+                  <div>✓ Защищённые платежи</div>
+                  <div>✓ Гарантия возврата</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        <Card className="bg-gradient-to-r from-amber-50 to-orange-50">
+          <CardContent className="p-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                  Нужна помощь с заказом?
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  Наши консультанты помогут оформить заказ и ответят на все вопросы
+                </p>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <span className="font-semibold">Телефон:</span>
+                    <span>+7 (495) 123-45-67</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="font-semibold">Время работы:</span>
+                    <span>Пн-Вс: 8:00 - 22:00</span>
+                  </div>
+                </div>
+              </div>
+              <div className="text-center">
+                <Button className="bg-amber-600 hover:bg-amber-700" size="lg">
+                  Связаться с консультантом
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </Layout>
+  );
+};
+
+export default Cart;
             ))}
           </div>
 

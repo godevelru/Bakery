@@ -1,141 +1,131 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Layout from '@/components/layout/Layout';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { products, categories } from '@/data/products';
-import { useCart } from '@/context/CartContext';
-import { ShoppingCart, Search, Filter } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { products } from '@/data/products';
+import ProductFilters from '@/components/catalog/ProductFilters';
+import ProductGrid from '@/components/catalog/ProductGrid';
+import ProductSort from '@/components/catalog/ProductSort';
+import ProductPagination from '@/components/catalog/ProductPagination';
 
 const Catalog: React.FC = () => {
-  const { dispatch } = useCart();
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState('name');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(12);
 
-  const filteredProducts = products.filter(product => {
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const filteredAndSortedProducts = useMemo(() => {
+    let filtered = products.filter(product => {
+      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           product.description.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
+      const matchesIngredients = selectedIngredients.length === 0 || 
+        selectedIngredients.some(ingredient => 
+          product.ingredients.some(prodIngredient => 
+            prodIngredient.toLowerCase().includes(ingredient.toLowerCase())
+          )
+        );
+      
+      return matchesCategory && matchesSearch && matchesPrice && matchesIngredients;
+    });
 
-  const addToCart = (product: any) => {
-    dispatch({ type: 'ADD_ITEM', product });
+    // Сортировка
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'price-asc':
+          return a.price - b.price;
+        case 'price-desc':
+          return b.price - a.price;
+        case 'weight':
+          return b.weight - a.weight;
+        case 'popularity':
+          return Math.random() - 0.5; // Случайная сортировка для демо
+        case 'newest':
+          return Math.random() - 0.5; // Случайная сортировка для демо
+        default:
+          return a.name.localeCompare(b.name);
+      }
+    });
+
+    return filtered;
+  }, [products, selectedCategory, searchQuery, priceRange, selectedIngredients, sortBy]);
+
+  const totalPages = Math.ceil(filteredAndSortedProducts.length / itemsPerPage);
+  const paginatedProducts = filteredAndSortedProducts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const clearFilters = () => {
+    setSelectedCategory('all');
+    setSearchQuery('');
+    setPriceRange([0, 1000]);
+    setSelectedIngredients([]);
+    setCurrentPage(1);
   };
 
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
+        <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Каталог продукции</h1>
-          <p className="text-xl text-gray-600">Выберите свежую выпечку на любой вкус</p>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Выберите свежую выпечку на любой вкус из нашего широкого ассортимента
+          </p>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
-          <aside className="lg:w-64">
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <h3 className="text-lg font-semibold mb-4 flex items-center">
-                <Filter className="w-5 h-5 mr-2" />
-                Фильтры
-              </h3>
-              
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Поиск
-                </label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    type="text"
-                    placeholder="Найти продукт..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Категории
-                </label>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => setSelectedCategory('all')}
-                    className={`w-full text-left p-2 rounded ${
-                      selectedCategory === 'all' ? 'bg-amber-100 text-amber-700' : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    Все категории
-                  </button>
-                  {categories.map((category) => (
-                    <button
-                      key={category.id}
-                      onClick={() => setSelectedCategory(category.id)}
-                      className={`w-full text-left p-2 rounded flex items-center space-x-2 ${
-                        selectedCategory === category.id ? 'bg-amber-100 text-amber-700' : 'hover:bg-gray-100'
-                      }`}
-                    >
-                      <span>{category.icon}</span>
-                      <span>{category.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+          <aside className="lg:w-80">
+            <ProductFilters
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              selectedCategory={selectedCategory}
+              onCategoryChange={setSelectedCategory}
+              priceRange={priceRange}
+              onPriceRangeChange={setPriceRange}
+              selectedIngredients={selectedIngredients}
+              onIngredientsChange={setSelectedIngredients}
+              onClearFilters={clearFilters}
+            />
           </aside>
 
-          <div className="flex-1">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProducts.map((product) => (
-                <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                  <div className="relative">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-48 object-cover"
-                    />
-                    <div className="absolute top-4 right-4 bg-amber-500 text-white px-3 py-1 rounded-full font-semibold">
-                      {product.price} ₽
-                    </div>
-                  </div>
-                  
-                  <CardContent className="p-6">
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      {product.name}
-                    </h3>
-                    <p className="text-gray-600 mb-4">
-                      {product.description}
-                    </p>
-                    <div className="text-sm text-gray-500 mb-4">
-                      <div>Вес: {product.weight}г</div>
-                      <div>Время приготовления: {product.preparationTime} мин</div>
-                    </div>
-                  </CardContent>
-                  
-                  <CardFooter className="p-6 pt-0 flex gap-2">
-                    <Link to={`/product/${product.id}`} className="flex-1">
-                      <Button variant="outline" className="w-full">
-                        Подробнее
-                      </Button>
-                    </Link>
-                    <Button 
-                      onClick={() => addToCart(product)}
-                      className="bg-amber-600 hover:bg-amber-700"
-                    >
-                      <ShoppingCart className="w-4 h-4" />
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
+          <div className="flex-1 space-y-6">
+            <ProductSort
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              totalProducts={filteredAndSortedProducts.length}
+            />
 
-            {filteredProducts.length === 0 && (
+            <ProductGrid products={paginatedProducts} viewMode={viewMode} />
+
+            {filteredAndSortedProducts.length === 0 && (
               <div className="text-center py-12">
-                <p className="text-xl text-gray-600">Продукты не найдены</p>
-                <p className="text-gray-500 mt-2">Попробуйте изменить фильтры или поисковый запрос</p>
+                <div className="text-6xl mb-4">🔍</div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  Товары не найдены
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Попробуйте изменить параметры поиска или фильтры
+                </p>
+                <Button onClick={clearFilters} variant="outline">
+                  Сбросить фильтры
+                </Button>
               </div>
+            )}
+
+            {totalPages > 1 && (
+              <ProductPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                onItemsPerPageChange={setItemsPerPage}
+              />
             )}
           </div>
         </div>
